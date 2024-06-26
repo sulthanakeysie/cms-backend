@@ -1,65 +1,95 @@
+import { sendResponse } from "../helpers/Response.js";
 import Customer from "../models/customer.schema.js";
 
 export const createCustomer = async (req, res) => {
   try {
     const { name, email, phone, address } = req.body;
+
     const existingCustomer = await Customer.findOne({ email });
-    if (existingCustomer) {
-      return res
-        .status(400)
-        .json({ error: "Customer with this email already exists" });
-    }
-    const newCustomer = new Customer({ name, email, phone, address });
+    if (existingCustomer)
+      return sendResponse(
+        res,
+        400,
+        null,
+        "Customer with this email already exists"
+      );
+
+    const newCustomer = new Customer({
+      name,
+      email,
+      phone,
+      address,
+      user: req.user.id,
+    });
     await newCustomer.save();
-    res.status(201).json(newCustomer);
+    return sendResponse(res, 201, newCustomer, "Customer added successfully");
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return sendResponse(res, 500, null, err.message);
   }
 };
 
 export const getCustomers = async (req, res) => {
   try {
-    const customers = await Customer.find();
-    res.status(200).json(customers);
+    const customers = await Customer.find({ user: req.user.id });
+    return sendResponse(
+      res,
+      200,
+      customers,
+      "Fetched all customers Successfully"
+    );
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return sendResponse(res, 500, null, err.message);
   }
 };
 
 export const getCustomerById = async (req, res) => {
   try {
-    const customer = await Customer.findById(req.params.id);
-    if (!customer) return res.status(404).json({ error: "Customer not found" });
-    res.status(200).json(customer);
+    const customer = await Customer.findOne({
+      _id: req.params.id,
+      user: req.user.id,
+    });
+    if (!customer) return sendResponse(res, 404, null, "Customer not found");
+    return sendResponse(
+      res,
+      200,
+      customer,
+      "Customer details fetched successfully"
+    );
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return sendResponse(res, 500, null, err.message);
   }
 };
 
 export const updateCustomer = async (req, res) => {
   try {
-    const updatedCustomer = await Customer.findByIdAndUpdate(
-      req.params.id,
+    const updatedCustomer = await Customer.findOneAndUpdate(
+      { _id: req.params.id, user: req.user.id },
       req.body,
-      {
-        new: true,
-      }
+      { new: true }
     );
     if (!updatedCustomer)
-      return res.status(404).json({ error: "Customer not found" });
-    res.status(200).json(updatedCustomer);
+      return sendResponse(res, 404, null, "Customer not found");
+    return sendResponse(
+      res,
+      200,
+      updatedCustomer,
+      "Customer details updated successfully"
+    );
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return sendResponse(res, 500, null, err.message);
   }
 };
 
 export const deleteCustomer = async (req, res) => {
   try {
-    const deletedCustomer = await Customer.findByIdAndDelete(req.params.id);
+    const deletedCustomer = await Customer.findOneAndDelete({
+      _id: req.params.id,
+      user: req.user.id,
+    });
     if (!deletedCustomer)
-      return res.status(404).json({ error: "Customer not found" });
-    res.status(200).json({ message: "Customer deleted" });
+      return sendResponse(res, 404, null, "Customer not found");
+    return sendResponse(res, 200, null, "Customer deleted successfully");
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return sendResponse(res, 500, null, err.message);
   }
 };
